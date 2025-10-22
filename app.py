@@ -5,7 +5,7 @@ from openai import OpenAI
 
 # ===================== CẤU HÌNH TRANG =====================
 st.set_page_config(
-    page_title="AI Assistant by DuyKhánh, QuốcHoàng & Bé HữuNhân",
+    page_title="Sáng tạo by DuyKhánh, QuốcHoàng & Bé HữuNhân",
     page_icon="💎",
     layout="centered",
     initial_sidebar_state="collapsed",
