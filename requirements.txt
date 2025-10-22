@@ -1,6 +1,6 @@
 streamlit==1.38.0
-transformers==4.44.2
-torch==2.9.0          # bản có wheel cho Python 3.13
+transformers==4.42.3
+torch==2.5.0
 accelerate
 sentencepiece
-protobuf<5            # tránh lỗi protobuf mới
+protobuf<5
