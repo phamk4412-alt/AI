@@ -228,7 +228,7 @@ if prompt:
 st.markdown(
     """
     <div class="footer">
-        © 2025 <b>DuyKhánh – QuốcHoàng – Bé HữuNhân</b> | Giao diện thiết kế bởi ChatGPT Studio |
+        © 2025 <b>DuyKhánh – QuốcHoàng – Bé HữuNhân</b> | Giao diện thiết kế bởi DuyKhánh |
         Mọi quyền được bảo lưu.
     </div>
     """,
