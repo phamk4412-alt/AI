@@ -4,7 +4,7 @@ from openai import OpenAI
 
 # -------------------- Cấu hình trang --------------------
 st.set_page_config(page_title="Chat với OpenAI", page_icon="💬", layout="centered")
-st.title("💬 Chat với OpenAI (DuyKhánh, QuốcHoàng, Bé HưuNhân)")
+st.title("💬 Chat với OpenAI (sản phẩm của DuyKhánh, QuốcHoàng, Bé HưuNhân)")
 st.caption("💡 Trợ lý AI thân thiện, trò chuyện bằng tiếng Việt • Model mặc định: gpt-4o-mini")
 
 # -------------------- Lấy API key --------------------
