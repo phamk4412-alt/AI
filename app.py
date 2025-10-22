@@ -1,205 +1,193 @@
 import os
-import time
 import streamlit as st
 from openai import OpenAI
+from pathlib import Path
 
-# ===================== CẤU HÌNH TRANG =====================
-st.set_page_config(
-    page_title="AI Assistant by DuyKhánh, QuốcHoàng & Bé HữuNhân",
-    page_icon="💎",
-    layout="centered",
-    initial_sidebar_state="collapsed",
-)
+# ============ CẤU HÌNH CƠ BẢN ============
+st.set_page_config(page_title="Chat với OpenAI", page_icon="💬", layout="centered")
 
-# ===================== SIDEBAR: CHỌN GIAO DIỆN + MODEL =====================
+# Lấy API key (ưu tiên st.secrets)
+api_key = st.secrets.get("OPENAI_API_KEY", None) or os.getenv("OPENAI_API_KEY")
+if not api_key:
+    st.error("Chưa có OPENAI_API_KEY. Vào Settings → Secrets của Streamlit Cloud để thêm.")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+# ============ SIDEBAR ============
 with st.sidebar:
-    st.header("⚙️ Cài đặt hệ thống")
-    theme_mode = st.radio("🎨 Chế độ hiển thị", ["🌙 Tối", "🌞 Sáng"], horizontal=True)
-    model = st.selectbox("🤖 Model", ["gpt-4o-mini", "gpt-4o", "o4-mini"], index=0)
-    temperature = st.slider("🔥 Temperature", 0.0, 1.0, 0.3, 0.1)
-    max_tokens = st.slider("🧠 Max tokens", 64, 2048, 512, 64)
-    st.markdown("---")
-    if st.button("🧹 Làm mới hội thoại"):
-        st.session_state.clear()
-        st.rerun()
-    st.caption("© 2025 – Sản phẩm bởi DuyKhánh, QuốcHoàng & Bé HữuNhân")
+    st.markdown("## Cài đặt")
 
-# ===================== MÀU SẮC THEO CHỦ ĐỀ =====================
-if theme_mode == "🌙 Tối":
-    BACKGROUND = "#0b1b26"
-    SECOND_BG = "#0f2638"
-    TEXT = "#e8f5ff"
-    ACCENT = "#00c2ff"
-    CARD_BG = "rgba(0,60,100,0.2)"
-else:
-    BACKGROUND = "#f9fcff"
-    SECOND_BG = "#dceeff"
-    TEXT = "#0a2233"
-    ACCENT = "#0077cc"
-    CARD_BG = "#ffffff"
+    # Giao diện
+    theme_mode = st.radio("Giao diện", ["Sáng", "Tối", "Tùy chỉnh"], index=0)
 
-# ===================== CSS ĐỘNG =====================
-CUSTOM_CSS = f"""
-<style>
-html, body, [data-testid="stAppViewContainer"] {{
-  background: linear-gradient(180deg, {BACKGROUND}, {SECOND_BG});
-  color: {TEXT};
-  font-family: 'Segoe UI', sans-serif;
-}}
+    # Tham số Chat
+    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "o4-mini"], index=0)
+    temperature = st.slider("Temperature", 0.0, 1.0, 0.3, 0.1)
+    max_tokens = st.slider("Max tokens (đáp án)", 64, 4096, 512, 64)
+    st.caption("Gợi ý: giữ temperature thấp để trả lời ổn định hơn.")
 
-.topbar {{
-  position: sticky; top: 0; z-index: 50;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 18px; border-radius: 12px;
-  background: linear-gradient(90deg, {ACCENT}22, {ACCENT}11);
-  box-shadow: 0 4px 14px {ACCENT}33;
-  border: 1px solid {ACCENT}33;
-}}
-.brand {{
-  display:flex; align-items:center; gap:12px;
-  font-weight:600; color:{ACCENT};
-}}
-.brand .logo {{
-  width:28px; height:28px; border-radius:6px;
-  background: linear-gradient(135deg, {ACCENT}, #0066ff);
-  box-shadow: 0 0 14px {ACCENT}66;
-}}
-.pill {{
-  font-size:13px; padding:6px 12px; border-radius:20px;
-  background: {ACCENT}11;
-  color:{TEXT}; border:1px solid {ACCENT}33;
-}}
+    st.divider()
+    st.markdown("#### Tùy chỉnh giao diện (Custom)")
+    # Các control chỉ bật khi chọn Tùy chỉnh
+    disabled = (theme_mode != "Tùy chỉnh")
+    bg = st.color_picker("Nền (bg)", "#0B1220", disabled=disabled)
+    surface = st.color_picker("Bề mặt (card)", "#131B2E", disabled=disabled)
+    primary = st.color_picker("Nhấn (primary)", "#3B82F6", disabled=disabled)
+    text = st.color_picker("Chữ (text)", "#E5E7EB", disabled=disabled)
+    subtle = st.color_picker("Chữ phụ (muted)", "#9CA3AF", disabled=disabled)
+    radius = st.slider("Bo góc (px)", 8, 28, 18, disabled=disabled)
+    shadow = st.selectbox("Độ đổ bóng", ["nhẹ", "vừa", "đậm"], index=1, disabled=disabled)
+    font = st.selectbox("Font chữ", ["Inter, system-ui", "Poppins, system-ui", "Roboto, system-ui"], index=0, disabled=disabled)
 
-.chat-wrapper {{
-  background: {CARD_BG};
-  border: 1px solid {ACCENT}22;
-  border-radius: 16px;
-  padding: 16px;
-}}
-.msg {{
-  display: inline-block; max-width: 92%;
-  border-radius: 14px; padding: 12px 15px; margin: 6px 0;
-  line-height: 1.55; font-size: 16px;
-}}
-.msg.assistant {{
-  background: linear-gradient(180deg, {ACCENT}22, {ACCENT}11);
-  color: {TEXT};
-  border-left: 3px solid {ACCENT};
-}}
-.msg.user {{
-  background: linear-gradient(180deg, {ACCENT}44, {ACCENT}33);
-  color: {TEXT};
-  border-right: 3px solid {ACCENT};
-}}
-.row {{ display:flex; width:100%; }}
-.row.user {{ justify-content: flex-end; }}
-.row.assistant {{ justify-content: flex-start; }}
+# ============ TẠO CSS THEO THEME ============
+def build_css():
+    if theme_mode == "Sáng":
+        palette = {
+            "bg": "#F7F8FA",
+            "surface": "#FFFFFF",
+            "primary": "#0EA5E9",
+            "text": "#0F172A",
+            "muted": "#475569",
+            "radius": 14,
+            "shadow": "0 8px 28px rgba(2,8,23,.06)",
+            "font": "Inter, system-ui",
+        }
+    elif theme_mode == "Tối":
+        palette = {
+            "bg": "#0B1220",
+            "surface": "#121826",
+            "primary": "#3B82F6",
+            "text": "#E5E7EB",
+            "muted": "#9CA3AF",
+            "radius": 16,
+            "shadow": "0 10px 36px rgba(0,0,0,.45)",
+            "font": "Inter, system-ui",
+        }
+    else:
+        shadow_map = {
+            "nhẹ": "0 6px 18px rgba(0,0,0,.12)",
+            "vừa": "0 10px 30px rgba(0,0,0,.20)",
+            "đậm": "0 16px 48px rgba(0,0,0,.32)",
+        }
+        palette = {
+            "bg": bg,
+            "surface": surface,
+            "primary": primary,
+            "text": text,
+            "muted": subtle,
+            "radius": radius,
+            "shadow": shadow_map[shadow],
+            "font": font,
+        }
 
-.card {{
-  border: 1px solid {ACCENT}33;
-  background: {CARD_BG};
-  border-radius: 12px;
-  padding: 14px;
-  color: {TEXT};
-  box-shadow: inset 0 0 15px {ACCENT}15;
-}}
+    css = f"""
+    <style>
+      :root {{
+        --bg: {palette['bg']};
+        --surface: {palette['surface']};
+        --primary: {palette['primary']};
+        --text: {palette['text']};
+        --muted: {palette['muted']};
+        --radius: {palette['radius']}px;
+        --shadow: {palette['shadow']};
+        --font: {palette['font']};
+      }}
+      html, body, [data-testid="stAppViewContainer"] {{
+        background: var(--bg) !important;
+        color: var(--text);
+        font-family: var(--font);
+      }}
+      /* Topbar */
+      .brand-wrap {{
+        position: sticky; top: 0; z-index: 50;
+        background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,0));
+        padding: 12px 0 4px;
+      }}
+      .brand {{
+        display:flex; align-items:center; gap:12px; padding:12px 16px;
+        background: var(--surface); border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(148,163,184,.12);
+      }}
+      .brand .title {{
+        font-weight: 700; letter-spacing: .3px; font-size: 18px;
+      }}
+      .brand .subtitle {{ color: var(--muted); font-size: 12px; }}
 
-[data-baseweb="textarea"] textarea, .stTextInput input {{
-  background: {ACCENT}08 !important;
-  color: {TEXT} !important;
-  border-radius: 10px !important;
-  border: 1px solid {ACCENT}33 !important;
-}}
+      /* Cards + chat bubbles */
+      .card {{
+        background: var(--surface); border-radius: var(--radius);
+        box-shadow: var(--shadow); padding: 18px; border: 1px solid rgba(148,163,184,.12);
+      }}
+      .bubble-user {{
+        background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.3);
+      }}
+      .bubble-ai {{
+        background: rgba(148,163,184,.08); border: 1px solid rgba(148,163,184,.18);
+      }}
+      /* Accent */
+      .accent {{ color: var(--primary); }}
+      a, .st-emotion-cache-16idsys p a {{ color: var(--primary) !important; }}
+      .credit {{
+        color: var(--muted); font-size: 12px; text-align:center; margin-top: 18px;
+      }}
+      /* Input box */
+      [data-testid="stChatInput"] > div {{
+        border-radius: var(--radius) !important; border: 1px solid rgba(148,163,184,.18);
+        box-shadow: var(--shadow);
+      }}
+    </style>
+    """
+    return css
 
-.stButton>button {{
-  background: linear-gradient(135deg, {ACCENT}, #0077ff);
-  color: white; border: none;
-  border-radius: 10px; padding: 8px 14px;
-  box-shadow: 0 6px 20px {ACCENT}33;
-  font-weight: 500;
-}}
-.stButton>button:hover {{ filter: brightness(1.1); }}
+st.markdown(build_css(), unsafe_allow_html=True)
 
-.footer {{
-  text-align:center;
-  font-size:13px;
-  color:{TEXT}AA;
-  margin-top: 18px;
-  padding-top: 8px;
-  border-top: 1px solid {ACCENT}22;
-}}
-</style>
-"""
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+# ============ BRAND BAR (logo nếu có) ============
+logo_path = Path("assets/logo.png")
+logo_html = ""
+if logo_path.exists():
+    # hiển thị logo nếu repo có assets/logo.png
+    logo_html = f'<img src="assets/logo.png" width="28" height="28" style="border-radius:8px;">'
 
-# ===================== THANH TRÊN =====================
 st.markdown(
     f"""
-    <div class="topbar">
-        <div class="brand">
-            <div class="logo"></div>
-            <div><b>AI Assistant</b> • DuyKhánh, QuốcHoàng, Bé HữuNhân</div>
+    <div class="brand-wrap">
+      <div class="brand">
+        {logo_html}
+        <div>
+          <div class="title">💬 Chat với OpenAI</div>
+          <div class="subtitle">Giao diện cấp doanh nghiệp — do <span class="accent">DuyKhanh, QuốcHoàng, béHữuNhân</span> phát triển</div>
         </div>
-        <div class="pill">Trạng thái: Online ✅</div>
+      </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# ===================== API KEY =====================
-api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-if not api_key:
-    st.error("❌ Thiếu OPENAI_API_KEY. Vào Settings → Secrets của Streamlit Cloud để thêm.")
-    st.stop()
-client = OpenAI(api_key=api_key)
-
-# ===================== BỘ NHỚ HỘI THOẠI =====================
+# ============ BỘ NHỚ HỘI THOẠI ============
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system",
-         "content": "Bạn là trợ lý chuyên nghiệp, trả lời bằng tiếng Việt, giọng điệu lịch sự, dễ hiểu."}
+        {"role": "system", "content": "Bạn là trợ lý hữu ích, trả lời ngắn gọn và đúng trọng tâm."}
     ]
 
-# ===================== GIỚI THIỆU =====================
-with st.expander("💎 Giới thiệu sản phẩm", expanded=True):
-    st.markdown(
-        f"""
-        <div class="card">
-        <b>AI Assistant</b> được phát triển bởi <b>DuyKhánh</b>, <b>QuốcHoàng</b> và <b>Bé HữuNhân</b> —
-        mang đến trải nghiệm hội thoại AI thân thiện, thông minh và dễ sử dụng.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# ===================== HIỂN THỊ HỘI THOẠI =====================
-st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
+# ============ LỊCH SỬ ============
 for m in st.session_state.messages:
-    if m["role"] == "system":
-        continue
-    role = m["role"]
-    css_role = "assistant" if role == "assistant" else "user"
-    st.markdown(
-        f"""
-        <div class="row {css_role}">
-            <div class="msg {css_role}">{m["content"]}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-st.markdown('</div>', unsafe_allow_html=True)
+    if m["role"] == "user":
+        with st.chat_message("user"):
+            st.markdown(f'<div class="card bubble-user">{m["content"]}</div>', unsafe_allow_html=True)
+    elif m["role"] == "assistant":
+        with st.chat_message("assistant"):
+            st.markdown(f'<div class="card bubble-ai">{m["content"]}</div>', unsafe_allow_html=True)
 
-# ===================== NHẬP VÀ PHẢN HỒI =====================
-prompt = st.chat_input("Nhập câu hỏi hoặc yêu cầu của bạn...")
-
+# ============ Ô CHAT ============
+prompt = st.chat_input("Nhập câu hỏi của bạn…")
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
-
-    st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
-    st.markdown(f'<div class="row user"><div class="msg user">{prompt}</div></div>', unsafe_allow_html=True)
+    with st.chat_message("user"):
+        st.markdown(f'<div class="card bubble-user">{prompt}</div>', unsafe_allow_html=True)
 
     try:
-        start = time.time()
         resp = client.chat.completions.create(
             model=model,
             messages=st.session_state.messages,
@@ -207,24 +195,19 @@ if prompt:
             max_tokens=max_tokens,
         )
         answer = resp.choices[0].message.content
-        latency = time.time() - start
-
-        st.markdown(f'<div class="row assistant"><div class="msg assistant">{answer}</div></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.caption(f"⏱️ Phản hồi sau {latency:.2f}s • Model: {model}")
-
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-
     except Exception as e:
-        st.error(f"⚠️ Lỗi khi gọi OpenAI API: {e}")
+        answer = f"Xin lỗi, có lỗi khi gọi OpenAI API: `{e}`"
 
-# ===================== FOOTER =====================
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+    with st.chat_message("assistant"):
+        st.markdown(f'<div class="card bubble-ai">{answer}</div>', unsafe_allow_html=True)
+
+# ============ FOOTER ============
 st.markdown(
-    f"""
-    <div class="footer">
-        © 2025 <b>DuyKhánh – QuốcHoàng – Bé HữuNhân</b> | 
-        Giao diện { 'Tối' if theme_mode == '🌙 Tối' else 'Sáng' } | 
-        All rights reserved.
+    """
+    <div class="credit">
+      © 2025 — Sản phẩm của <strong>DuyKhanh</strong>, <strong>QuốcHoàng</strong>, <strong>béHữuNhân</strong>.  
+      Yêu cầu tính năng mới? Nhắn ngay trong hộp chat này.
     </div>
     """,
     unsafe_allow_html=True,
