@@ -4,7 +4,7 @@ from openai import OpenAI
 
 st.set_page_config(page_title="Chat with OpenAI", page_icon="💬", layout="centered")
 
-st.title("💬 Chat với OpenAI (gọn nhẹ, không cần Transformers)")
+st.title("💬 Chat với OpenAI (sản phẩm của Khánh,Hoàng,Bé Nhân)")
 st.caption("Model mặc định: gpt-4o-mini")
 
 # Lấy API key từ st.secrets (khuyên dùng) hoặc biến môi trường
