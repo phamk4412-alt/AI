@@ -1,8 +1,7 @@
---index-url https://download.pytorch.org/whl/cpu
 streamlit==1.38.0
 transformers==4.36.2
-torch==2.5.0
-numpy==2.3.4
+torch==2.5.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 sentencepiece
 protobuf<5
 accelerate
