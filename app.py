@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ===================== SIDEBAR: CHỌN GIAO DIỆN + MODEL =====================
+# ===================== SIDEBAR: CÀI ĐẶT =====================
 with st.sidebar:
     st.header("⚙️ Cài đặt hệ thống")
     theme_mode = st.radio("🎨 Chế độ hiển thị", ["🌙 Tối", "🌞 Sáng"], horizontal=True)
@@ -24,7 +24,7 @@ with st.sidebar:
         st.rerun()
     st.caption("© 2025 – Sản phẩm bởi DuyKhánh, QuốcHoàng & Bé HữuNhân")
 
-# ===================== MÀU SẮC THEO CHỦ ĐỀ =====================
+# ===================== CHỌN MÀU GIAO DIỆN =====================
 if theme_mode == "🌙 Tối":
     BACKGROUND = "#0b1b26"
     SECOND_BG = "#0f2638"
@@ -38,7 +38,7 @@ else:
     ACCENT = "#0077cc"
     CARD_BG = "#ffffff"
 
-# ===================== CSS ĐỘNG =====================
+# ===================== CSS GIAO DIỆN =====================
 CUSTOM_CSS = f"""
 <style>
 html, body, [data-testid="stAppViewContainer"] {{
@@ -46,7 +46,6 @@ html, body, [data-testid="stAppViewContainer"] {{
   color: {TEXT};
   font-family: 'Segoe UI', sans-serif;
 }}
-
 .topbar {{
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
@@ -66,10 +65,8 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 .pill {{
   font-size:13px; padding:6px 12px; border-radius:20px;
-  background: {ACCENT}11;
-  color:{TEXT}; border:1px solid {ACCENT}33;
+  background: {ACCENT}11; color:{TEXT}; border:1px solid {ACCENT}33;
 }}
-
 .chat-wrapper {{
   background: {CARD_BG};
   border: 1px solid {ACCENT}22;
@@ -83,50 +80,36 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 .msg.assistant {{
   background: linear-gradient(180deg, {ACCENT}22, {ACCENT}11);
-  color: {TEXT};
-  border-left: 3px solid {ACCENT};
+  color: {TEXT}; border-left: 3px solid {ACCENT};
 }}
 .msg.user {{
   background: linear-gradient(180deg, {ACCENT}44, {ACCENT}33);
-  color: {TEXT};
-  border-right: 3px solid {ACCENT};
+  color: {TEXT}; border-right: 3px solid {ACCENT};
 }}
 .row {{ display:flex; width:100%; }}
 .row.user {{ justify-content: flex-end; }}
 .row.assistant {{ justify-content: flex-start; }}
-
 .card {{
-  border: 1px solid {ACCENT}33;
-  background: {CARD_BG};
-  border-radius: 12px;
-  padding: 14px;
-  color: {TEXT};
+  border: 1px solid {ACCENT}33; background: {CARD_BG};
+  border-radius: 12px; padding: 14px; color: {TEXT};
   box-shadow: inset 0 0 15px {ACCENT}15;
 }}
-
 [data-baseweb="textarea"] textarea, .stTextInput input {{
   background: {ACCENT}08 !important;
   color: {TEXT} !important;
   border-radius: 10px !important;
   border: 1px solid {ACCENT}33 !important;
 }}
-
 .stButton>button {{
   background: linear-gradient(135deg, {ACCENT}, #0077ff);
-  color: white; border: none;
-  border-radius: 10px; padding: 8px 14px;
-  box-shadow: 0 6px 20px {ACCENT}33;
+  color: white; border: none; border-radius: 10px;
+  padding: 8px 14px; box-shadow: 0 6px 20px {ACCENT}33;
   font-weight: 500;
 }}
 .stButton>button:hover {{ filter: brightness(1.1); }}
-
 .footer {{
-  text-align:center;
-  font-size:13px;
-  color:{TEXT}AA;
-  margin-top: 18px;
-  padding-top: 8px;
-  border-top: 1px solid {ACCENT}22;
+  text-align:center; font-size:13px; color:{TEXT}AA;
+  margin-top: 18px; padding-top: 8px; border-top: 1px solid {ACCENT}22;
 }}
 </style>
 """
@@ -146,7 +129,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ===================== API KEY =====================
+# ===================== KẾT NỐI API =====================
 api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("❌ Thiếu OPENAI_API_KEY. Vào Settings → Secrets của Streamlit Cloud để thêm.")
@@ -157,20 +140,11 @@ client = OpenAI(api_key=api_key)
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "system",
-         "content": "Bạn là trợ lý chuyên nghiệp, trả lời bằng tiếng Việt, giọng điệu lịch sự, dễ hiểu."}
+         "content": "Bạn là trợ lý AI chuyên nghiệp, trả lời bằng tiếng Việt, giọng điệu lịch sự, ngắn gọn, dễ hiểu."}
     ]
 
-# ===================== GIỚI THIỆU =====================
-with st.expander("💎 Giới thiệu sản phẩm", expanded=True):
-    st.markdown(
-        f"""
-        <div class="card">
-        <b>AI Assistant</b> được phát triển bởi <b>DuyKhánh</b>, <b>QuốcHoàng</b> và <b>Bé HữuNhân</b> —
-        mang đến trải nghiệm hội thoại AI thân thiện, thông minh và dễ sử dụng.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+# ===================== KHUNG NHẬP Ở TRÊN =====================
+prompt = st.chat_input("💬 Nhập câu hỏi hoặc yêu cầu của bạn...")
 
 # ===================== HIỂN THỊ HỘI THOẠI =====================
 st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
@@ -189,14 +163,9 @@ for m in st.session_state.messages:
     )
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ===================== NHẬP VÀ PHẢN HỒI =====================
-prompt = st.chat_input("Nhập câu hỏi hoặc yêu cầu của bạn...")
-
+# ===================== XỬ LÝ PHẢN HỒI =====================
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
-
-    st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
-    st.markdown(f'<div class="row user"><div class="msg user">{prompt}</div></div>', unsafe_allow_html=True)
 
     try:
         start = time.time()
@@ -209,11 +178,8 @@ if prompt:
         answer = resp.choices[0].message.content
         latency = time.time() - start
 
-        st.markdown(f'<div class="row assistant"><div class="msg assistant">{answer}</div></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.caption(f"⏱️ Phản hồi sau {latency:.2f}s • Model: {model}")
-
         st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.success(f"✅ Trả lời sau {latency:.2f}s")
 
     except Exception as e:
         st.error(f"⚠️ Lỗi khi gọi OpenAI API: {e}")
@@ -223,8 +189,7 @@ st.markdown(
     f"""
     <div class="footer">
         © 2025 <b>DuyKhánh – QuốcHoàng – Bé HữuNhân</b> | 
-        Giao diện { 'Tối' if theme_mode == '🌙 Tối' else 'Sáng' } | 
-        All rights reserved.
+        Giao diện {'Tối' if theme_mode == '🌙 Tối' else 'Sáng'} | All rights reserved.
     </div>
     """,
     unsafe_allow_html=True,
