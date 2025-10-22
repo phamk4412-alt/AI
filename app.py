@@ -18,10 +18,10 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-# -------------------- Sidebar: cấu hình --------------------
+# -------------------- Sidebar --------------------
 with st.sidebar:
     st.header("⚙️ Cài đặt")
-    model = st.selectbox("Chọn model", ["gpt-4o-mini", "gpt-4o", "o4-mini"], index=0)
+    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "o4-mini"], index=0)
     temperature = st.slider("Nhiệt độ (Temperature)", 0.0, 1.0, 0.3, 0.1)
     max_tokens = st.slider("Số token tối đa", 64, 2048, 512, 64)
     st.caption("💡 Nhiệt độ thấp → trả lời ổn định hơn")
@@ -40,8 +40,10 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "system", "content": "Bạn là trợ lý thân thiện, trả lời ngắn gọn và dễ hiểu."}
     ]
+if "show_camera" not in st.session_state:
+    st.session_state.show_camera = False  # kiểm soát hiển thị camera
 
-# Hiển thị hội thoại trước đó
+# -------------------- Hiển thị hội thoại --------------------
 for m in st.session_state.messages:
     if m["role"] == "system":
         continue
@@ -53,25 +55,37 @@ for m in st.session_state.messages:
         else:
             st.markdown(m["content"])
 
-# -------------------- Ô nhập liệu --------------------
-st.markdown("### 💬 Nhập câu hỏi của bạn")
-attach_cam = st.camera_input("📸 Chụp ảnh (tùy chọn)")
-attach_file = st.file_uploader("📎 Hoặc tải ảnh từ máy", type=["png", "jpg", "jpeg"], key="upload")
+# -------------------- Giao diện gửi câu hỏi --------------------
+st.markdown("### 💬 Gửi câu hỏi hoặc kèm ảnh")
+
+col1, col2 = st.columns([1, 2])
+with col1:
+    # Nút bật camera
+    if st.button("📸 Chụp ảnh ngay"):
+        st.session_state.show_camera = not st.session_state.show_camera
+
+with col2:
+    attach_file = st.file_uploader("📎 Hoặc tải ảnh từ máy", type=["png", "jpg", "jpeg"], key="upload")
 
 attached_b64 = None
 mime_type = None
-if attach_cam:
-    attached_b64 = base64.b64encode(attach_cam.getvalue()).decode("utf-8")
-    mime_type = "image/png"
-elif attach_file:
-    attached_b64 = base64.b64encode(attach_file.getvalue()).decode("utf-8")
-    mime_type = attach_file.type or "image/png"
 
+# Hiện camera khi bật
+if st.session_state.show_camera:
+    photo = st.camera_input("Chụp ảnh tại đây")
+    if photo is not None:
+        attached_b64 = base64.b64encode(photo.getvalue()).decode("utf-8")
+        mime_type = "image/png"
+else:
+    if attach_file is not None:
+        attached_b64 = base64.b64encode(attach_file.getvalue()).decode("utf-8")
+        mime_type = attach_file.type or "image/png"
+
+# -------------------- Ô chat --------------------
 prompt = st.chat_input("Nhập tin nhắn...")
 
 # -------------------- Gửi câu hỏi --------------------
 if prompt:
-    # Lưu tin nhắn user
     if attached_b64:
         user_msg = {"text": prompt, "image_b64": attached_b64}
     else:
@@ -87,7 +101,7 @@ if prompt:
     with st.chat_message("assistant"):
         try:
             if attached_b64:
-                # ===== Có ảnh → dùng Responses API =====
+                # Có ảnh → dùng Responses API
                 content_blocks = [
                     {"type": "text", "text": prompt},
                     {"type": "input_image", "image_data": attached_b64, "mime_type": mime_type},
@@ -103,7 +117,7 @@ if prompt:
                 )
                 answer = resp.output_text
             else:
-                # ===== Không ảnh → Chat Completions API =====
+                # Không ảnh → Chat Completions API
                 msgs = [{"role": "system", "content": "Bạn là trợ lý thân thiện, giúp người dùng bằng tiếng Việt dễ hiểu."}]
                 for m in st.session_state.messages:
                     if m["role"] == "system":
